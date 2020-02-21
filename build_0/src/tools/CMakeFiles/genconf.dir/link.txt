@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/gcc -mavx    -Wall -Wno-unused -Wunused-value -Wno-unknown-pragmas    -O3 -DNDEBUG -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.14.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names    CMakeFiles/genconf.dir/genconf.c.o  -o genconf libgmxana.a ../mdlib/libmd.a ../gmxlib/libgmx.a -framework Accelerate -lm 
