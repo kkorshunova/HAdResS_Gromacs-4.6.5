@@ -905,6 +905,8 @@ void pr_inputrec(FILE *fp, int indent, const char *title, t_inputrec *ir,
         PR("cos-accel", ir->cos_accel);
         pr_matrix(fp, indent, "deform", ir->deform, bMDPformat);
 
+
+        //210716KKOR: Add H-AdResS keywords to scan!
         PS("adress", EBOOL(ir->bAdress));
         if (ir->bAdress)
         {
@@ -916,6 +918,12 @@ void pr_inputrec(FILE *fp, int indent, const char *title, t_inputrec *ir,
             PS("adress_site", EADRESSSITETYPE(ir->adress->site));
             PR("adress_ex_force_cap", ir->adress->ex_forcecap);
             PS("adress_do_hybridpairs", EBOOL(ir->adress->do_hybridpairs));
+            /* cp from H-AdResS, replaced BOOL with EBOOL.
+             * NOTE: onthefly_TI is NOT used in H-AdResS either
+            PS("adress_do_drift", EBOOL(ir->adress->do_drift));
+            PR("adress_deltaU",ir->adress->deltaU);
+            PS("adress_onthefly_TI", EBOOL(ir->adress->onthefly_TI));
+             */
 
             pr_rvec(fp, indent, "adress_reference_coords", ir->adress->refs, DIM, TRUE);
         }
