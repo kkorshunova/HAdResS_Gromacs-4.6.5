@@ -75,7 +75,9 @@ typedef struct {
     real                   lambda;
     /* The AdResS weighting function */
     real                  *wf;
+    real                  *wfprime; // 210722KKOR: H-AdResS
     unsigned short        *tf_table_index; /* The tf table that will be applied, if thermodyn, force enabled*/
+    real          *V_tot; // 210722KKOR: H-AdResS
 } t_mdatoms;
 
 #ifdef __cplusplus

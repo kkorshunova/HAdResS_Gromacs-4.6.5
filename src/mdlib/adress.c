@@ -55,6 +55,9 @@ adress_weight(rvec                 x,
     real sqr_dl, dl;
     real tmp;
     rvec dx;
+    /*210718KKOR: additional vars for H-AdResS:
+    real H5, H, H2, l;
+     */
 
     sqr_dl = 0.0;
 
@@ -108,6 +111,14 @@ adress_weight(rvec                 x,
     {
         tmp = cos((dl-adressr)*M_PI/2/adressw);
         return tmp*tmp;
+        /*210719KKOR: H-AdResS weighting scheme (prev 2 lines are commented):
+        l=fabs(dl-adressr);
+        H=adressw;
+        H5=H*H*H*H*H;
+
+        tmp=(1-30.0/H5*(l*l*l*l*l/5.0-1.0/2.0*l*l*l*l*H+l*l*l/3.0*H*H));
+        return tmp;
+        */
     }
 }
 

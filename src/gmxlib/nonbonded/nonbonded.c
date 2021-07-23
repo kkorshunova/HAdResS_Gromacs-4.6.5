@@ -327,11 +327,19 @@ void do_nonbonded(t_commrec *cr, t_forcerec *fr,
     nb_kernel_data_t  kernel_data;
     nb_kernel_t *     kernelptr = NULL;
     rvec *            f;
+    gmx_bool          bForeignLambda; //210722KKOR
 
     kernel_data.flags                   = flags;
     kernel_data.exclusions              = excl;
     kernel_data.lambda                  = lambda;
     kernel_data.dvdl                    = dvdl;
+
+    bForeignLambda = (flags & GMX_NONBONDED_DO_FOREIGNLAMBDA);
+    /* 210722KKOR: H-AdResS array used for "drift force" correction later on
+    if(!bForeignLambda){
+    for(i=0; i < mdatoms->nalloc; i++) mdatoms->V_tot[i]=0.0;
+    }
+     */
 
     if (fr->bAllvsAll)
     {

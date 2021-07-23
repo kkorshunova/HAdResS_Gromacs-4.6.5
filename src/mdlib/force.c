@@ -690,6 +690,13 @@ void do_force_lowlevel(FILE       *fplog,   gmx_large_int_t step,
         pr_rvecs(debug, 0, "fshift after bondeds", fr->fshift, SHIFTS);
     }
 
+    /* 210723KKOR: H-AdResS "drift force" correction goes here:
+    if (fr->adress_type != eAdressOff && fr->adress_do_drift)
+        adress_drift_term(fplog,cg0,cg1, cg1home,&(top->cgs),x,fr,md,ir->ePBC==epbcNONE ? NULL : &pbc, f, &enerd->term[F_ADR_DELTU]);
+     * todo: add proper definition & declaration of adress_drift_term()
+     * todo: make sure all arguments are correct for this gromcas version
+     */
+
     GMX_MPE_LOG(ev_force_finish);
 
 }

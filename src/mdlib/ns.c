@@ -1149,6 +1149,12 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
     t_nblist  *   coul_adress  = NULL;
     t_nblist  *   vdwc_ww      = NULL;
     t_nblist  *   coul_ww      = NULL;
+    /* 210721KKOR: add options for free energy
+     * required structs/vars/if-clauses are taken from put_in_list_at()
+    t_nblist *   vdwc_free  = NULL;
+    t_nblist *   vdw_free   = NULL;
+    t_nblist *   coul_free  = NULL;
+     */
 
     int           i, j, jcg, igid, gid, nbl_ind, nbl_ind_adress;
     atom_id       jj, jj0, jj1, i_atom;
@@ -1185,10 +1191,37 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
 
     iwater = (solvent_opt != esolNO) ? GET_CGINFO_SOLOPT(cginfo[icg]) : esolNO;
 
+    /*210721KKOR: following if-clause has to be changed to the one copied from put_in_list_at() */
     if (md->nPerturbed)
     {
-        gmx_fatal(FARGS, "AdResS does not support free energy pertubation\n");
+        gmx_fatal(FARGS, "AdResS does not support free energy perturbation\n");
     }
+    /* 210721KKOR: from put_in_list_at():
+    bFreeEnergy = FALSE;
+    if (md->nPerturbed)
+    {
+         * Check if any of the particles involved are perturbed.
+         * If not we can do the cheaper normal put_in_list
+         * and use more solvent optimization.
+         *
+        for (i = 0; i < nicg; i++)
+        {
+            bFreeEnergy |= bPert[i0+i];
+        }
+        * Loop over the j charge groups *
+        for (j = 0; (j < nj && !bFreeEnergy); j++)
+        {
+            jcg = jjcg[j];
+            jj0 = index[jcg];
+            jj1 = index[jcg+1];
+            * Finally loop over the atoms in the j-charge group *
+            for (jj = jj0; jj < jj1; jj++)
+            {
+                bFreeEnergy |= bPert[jj];
+            }
+        }
+    }
+    */
 
     /* Unpack pointers to neighbourlist structs */
     if (fr->nnblists == 2)
@@ -1254,7 +1287,7 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
         bDoCoul_i = (bDoCoul && qi != 0);
 
         /* Here we find out whether the energy groups interaction belong to a
-         * coarse-grained (vsite) or atomistic interaction. Note that, beacuse
+         * coarse-grained (vsite) or atomistic interaction. Note that, because
          * interactions between coarse-grained and other (atomistic) energygroups
          * are excluded automatically by grompp, it is sufficient to check for
          * the group id of atom i (igid) */
@@ -1292,13 +1325,32 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
                      * b_hybrid=true are placed into the _adress neighbour lists and
                      * processed by the generic AdResS kernel.
                      */
+                    /* 210721KKOR: H-AdResS excluded interactions:
+                     * CG: same condition (both wf_i and wf_j ~ 1 for F_CG to become ~0)
+                     * AT: unlike AdResS, where either i or j need to be ~0, both have to
+                     * be ~0 in H-AdResS for F_AT to become ~0
+                     * Therefore, the if-condition below must be adjusted
+                     * NOTE: optionally, the second part (!bEnergyGroupCG) might be accounted for
+                     * in the nsgrid_core() earlier - this would then double check it?? not sure
+                     */
                     if ( (bEnergyGroupCG &&
                           wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS ) ||
                          ( !bEnergyGroupCG && wf[jj] <= GMX_REAL_EPS ) )
                     {
                         continue;
                     }
+                    /* H-AdResS version:
+                     if ( (bEnergyGroupCG &&
+                          wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS ) ||
+                         ( !bEnergyGroupCG && wf[i_atom] <= GMX_REAL_EPS && wf[jj] <= GMX_REAL_EPS ) )
+                    {
+                       continue;
+                    } */
 
+                    /* 210721KKOR: strangely, this b_hybrid condition works for H-AdResS
+                     * even better than for AdResS, so no need to change it: BOTH wf_i and wf_j
+                     * must be either ~0 or ~1 for an interaction to be non-hybrid
+                     */
                     b_hybrid = !((wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS) ||
                                  (wf[i_atom] <= GMX_REAL_EPS && wf[jj] <= GMX_REAL_EPS));
 
@@ -1385,6 +1437,7 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
             close_i_nblist(vdwc_adress);
         }
     }
+    //TODO put the entire else-clause for the free energy nlists here
 }
 
 static void
@@ -2400,7 +2453,10 @@ static int nsgrid_core(FILE *log, t_commrec *cr, t_forcerec *fr,
                         continue;
                     }
                     /* Adress: an explicit cg that has a weigthing function of 0 is excluded
-                     *  from the neigbour list as it will not interact  */
+                     *  from the neighbour list as it will not interact  */
+                    /* 210720KKOR: H-AdResS: comment this if-clause due to a different interpolation scheme
+                     *  (sum instead of product of weighting functions)
+                     */
                     if (fr->adress_type != eAdressOff)
                     {
                         if (md->wf[cgs->index[icg]] <= GMX_REAL_EPS && egp_explicit(fr, igid))
@@ -2475,6 +2531,18 @@ static int nsgrid_core(FILE *log, t_commrec *cr, t_forcerec *fr,
                                                     /* check energy group exclusions */
                                                     if (!(i_egp_flags[jgid] & EGP_EXCL))
                                                     {
+                                                        /* 210720KKOR: H-AdResS: check if BOTH icg and j cgs are explicit
+                                                         * AND in the CG region. If yes, skip this cgi-j pair and go to the next j.
+                                                         * What index should be used here to identify the current j cg? jgid?
+                                                        if (fr->adress_type != eAdressOff)
+                                                        {
+                                                          if ((md->wf[cgs->index[icg]] <= GMX_REAL_EPS && egp_explicit(fr, igid)) && (md->wf[cgs->index[j]] <= GMX_REAL_EPS && egp_explicit(fr, jgid)))
+                                                          {
+                                                            continue;
+                                                           }
+                                                         }
+                                                         * MAKE SURE continue HERE ONLY SKIPS WITHIN THE j-LOOP
+                                                         */
                                                         if (r2 < rs2)
                                                         {
                                                             if (nsr[jgid] >= MAX_CG)

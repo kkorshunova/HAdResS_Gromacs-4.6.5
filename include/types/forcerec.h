@@ -446,10 +446,20 @@ typedef struct {
     rvec            adress_refs;
     int             n_adress_tf_grps;
     int           * adress_tf_table_index;
-    int            *adress_group_explicit;
-    t_forcetable *  atf_tabs;
+    int           * adress_group_explicit;
+    t_forcetable  * atf_tabs;
     real            adress_ex_forcecap;
     gmx_bool        adress_do_hybridpairs;
+    /* 210723KKOR: H-AdResS additional parameters:
+    gmx_bool        adress_do_drift;
+    real            adress_deltaU;
+    real          * adress_dhdl;
+    real          * adress_cgdens;
+    real          * adress_fcorr;
+    int             adress_dhdlbins;
+    int             adress_fcorr_count;
+    gmx_bool        adress_onthefly_TI;
+     */
 
     /* User determined parameters, copied from the inputrec */
     int  userint1;
