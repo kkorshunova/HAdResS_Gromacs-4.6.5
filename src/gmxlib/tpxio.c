@@ -1313,6 +1313,11 @@ static void do_inputrec(t_fileio *fio, t_inputrec *ir, gmx_bool bRead,
             gmx_fio_do_real(fio, ir->adress->ex_forcecap);
             gmx_fio_do_int(fio, ir->adress->n_energy_grps);
             gmx_fio_do_int(fio, ir->adress->do_hybridpairs);
+            // 210729KKOR: H-AdResS params
+            gmx_fio_do_int(fio,ir->adress->do_drift);
+            gmx_fio_do_real(fio, ir->adress->deltaU);
+            gmx_fio_do_int(fio,ir->adress->onthefly_TI);
+
 
             if (bRead)
             {

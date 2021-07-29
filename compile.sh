@@ -8,8 +8,8 @@ export CXX=g++
 #export CXXFLAGS="-g -O0 -Wall"
 
 # if script is started in the main source code dir:
-[ ! -d build_0 ] && mkdir build_0
-cd build_0
+[ ! -d build_1 ] && mkdir build_1
+cd build_1
 
 # CMake creates Makefile:
 # -D flags are prioritized over the project's default values
@@ -23,7 +23,7 @@ cmake \
   -DGMX_THREADS=OFF \
   -DBUILD_SHARED_LIBS=OFF \
   -DGMX_FFT_LIBRARY=fftpack \
-  -DCMAKE_INSTALL_PREFIX=/Users/kseniakorshunova/Documents/PhD_project/gromacs_4.6.5/gromacs-4.6.5/install_0 \
+  -DCMAKE_INSTALL_PREFIX=/Users/kseniakorshunova/Documents/PhD_project/gromacs_4.6.5/gromacs-4.6.5/install_1 \
   ..
 
 # run make (j=number of threads used for compilation)

@@ -2131,12 +2131,12 @@ void init_forcerec(FILE              *fp,
         fr->adress_ex_forcecap    = ir->adress->ex_forcecap;
         fr->adress_do_hybridpairs = ir->adress->do_hybridpairs;
         /* 210716KKOR: missing H-AdResS parameters:
-         * NOTE: onthefly_TI is NOT used in H-AdResS either
+         * NOTE: onthefly_TI is NOT used in H-AdResS either */
         fr->adress_do_drift       = ir->adress->do_drift;
         fr->adress_deltaU         = ir->adress->deltaU;
-        fr->adress_onthefly_TI    = ir->adress->onthefly_TI;*/
+        fr->adress_onthefly_TI    = ir->adress->onthefly_TI;
 
-        /* H-AdResS parameters for the do_drift correction function:
+        /* H-AdResS parameters for the do_drift correction function: */
         fr->adress_dhdlbins       = 500;
         snew(fr->adress_dhdl, fr->adress_dhdlbins);
         snew(fr->adress_cgdens, fr->adress_dhdlbins);
@@ -2147,7 +2147,7 @@ void init_forcerec(FILE              *fp,
             fr->adress_cgdens[i]   = 0.0;
             fr->adress_fcorr[i]    = 0.0;
         }
-        fr->adress_fcorr_count     = 0; */
+        fr->adress_fcorr_count     = 0;
 
         // Parameters for the tabulated correction "Thermoforce" (present in both vers)
         snew(fr->adress_group_explicit, ir->adress->n_energy_grps);

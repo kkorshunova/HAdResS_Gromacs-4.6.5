@@ -55,9 +55,7 @@ adress_weight(rvec                 x,
     real sqr_dl, dl;
     real tmp;
     rvec dx;
-    /*210718KKOR: additional vars for H-AdResS:
-    real H5, H, H2, l;
-     */
+    real H5, H, H2, l; //210718KKOR: additional vars for H-AdResS:
 
     sqr_dl = 0.0;
 
@@ -122,6 +120,83 @@ adress_weight(rvec                 x,
     }
 }
 
+
+real
+Dadress_weight(rvec            x,
+               int             adresstype,
+               real            adressr,
+               real            adressw,
+               rvec *          ref,
+               t_pbc *         pbc,
+               t_forcerec *         fr )
+{
+    int  i;
+    real l2 = adressr+adressw;
+    real sqr_dl,dl;
+    real tmp;
+    rvec dx;
+    real H5, l, H;
+
+    sqr_dl = 0.0;
+
+    if (pbc)
+    {
+        pbc_dx(pbc,(*ref),x,dx);
+    }
+    else
+    {
+        rvec_sub((*ref),x,dx);
+    }
+
+    switch(adresstype)
+    {
+        case eAdressOff:
+            /* default to explicit simulation */
+            return 0;
+        case eAdressConst:
+            /* constant value for weighting function = adressw */
+            return fr->adress_const_wf;
+        case eAdressXSplit:
+            /* plane through center of ref, varies in x direction */
+            sqr_dl         = dx[0]*dx[0];
+            break;
+        case eAdressSphere:
+            /* point at center of ref, assuming cubic geometry */
+            for(i=0;i<3;i++){
+                sqr_dl    += dx[i]*dx[i];
+            }
+            break;
+        default:
+            /* default to explicit simulation */
+            return 0;
+    }
+
+    dl=sqrt(sqr_dl);
+
+    /* molecule is coarse grained */
+    if (dl > l2)
+    {
+        return 0;
+    }
+    else if (dl < adressr)
+    {
+        return 0;
+    }
+        /* hybrid region */
+    else
+    {
+        l=dl-adressr;
+        H=adressw;
+        H5=H*H*H*H*H;
+        tmp=-30.0/H5*(l*l*l*l-2.0*l*l*l*H+l*l*H*H);
+        if (dx[0]<0.0 && adresstype==eAdressXSplit)tmp*=-1.0;
+        //printf ("DP %g %g\n", l, tmp);
+        return tmp;
+        //tmp=-2.0*cos((dl-adressr)*M_PI/2/adressw)*sin((dl-adressr)*M_PI/2/adressw)*M_PI/2/adressw;
+        //return tmp;
+    }
+}
+
 void
 update_adress_weights_com(FILE *               fplog,
                           int                  cg0,
@@ -141,6 +216,7 @@ update_adress_weights_com(FILE *               fplog,
     rvec *         ref;
     real *         massT;
     real *         wf;
+    real *         wfprime; //210728KKOR: added wfprime for H-AdResS thermoforce
 
 
     int n_hyb, n_ex, n_cg;
@@ -154,6 +230,7 @@ update_adress_weights_com(FILE *               fplog,
     adressw            = fr->adress_hy_width;
     massT              = mdatoms->massT;
     wf                 = mdatoms->wf;
+    wfprime            = mdatoms->wfprime; //210728KKOR: added wfprime for H-AdResS thermoforce
     ref                = &(fr->adress_refs);
 
 
@@ -179,6 +256,7 @@ update_adress_weights_com(FILE *               fplog,
         if (nrcg == 1)
         {
             wf[k0] = adress_weight(x[k0], adresstype, adressr, adressw, ref, pbc, fr);
+            wfprime[k0] = Dadress_weight(x[k0],adresstype,adressr,adressw,ref,pbc,fr);
             if (wf[k0] == 0)
             {
                 n_cg++;
@@ -237,6 +315,7 @@ update_adress_weights_com(FILE *               fplog,
 
             /* Set wf of all atoms in charge group equal to wf of com */
             wf[k0] = adress_weight(ix, adresstype, adressr, adressw, ref, pbc, fr);
+            wfprime[k0] = Dadress_weight(ix,adresstype,adressr,adressw,ref,pbc,fr);
 
             if (wf[k0] == 0)
             {
@@ -254,9 +333,14 @@ update_adress_weights_com(FILE *               fplog,
             for (k = (k0+1); (k < k1); k++)
             {
                 wf[k] = wf[k0];
+                wfprime[k]=wfprime[k0];
             }
         }
     }
+
+    /* 210728KKOR: this function is present in old H-AdResS, check if needed:
+     * adress_set_kernel_flags(n_ex, n_hyb, n_cg, mdatoms);
+     */
 }
 
 void update_adress_weights_atom_per_atom(

@@ -67,6 +67,10 @@ void read_adressparams(int *ninp_p, t_inpfile **inp_p, t_adress *adress, warninp
     STYPE ("adress_tf_grp_names",        adress_tf_grp_names,     NULL);
     STYPE ("adress_cg_grp_names",        adress_cg_grp_names,     NULL);
     EETYPE("adress_do_hybridpairs",      adress->do_hybridpairs, yesno_names);
+    // 210729KKOR: H-AdResS params
+    EETYPE("adress_do_drift",      adress->do_drift, yesno_names);
+    RTYPE("adress_deltaU", adress->deltaU, 0);
+    EETYPE("adress_onthefly_TI",      adress->onthefly_TI, yesno_names);
 
     nadress_refs = str_nelem(adress_refs, MAXPTR, ptr1);
 

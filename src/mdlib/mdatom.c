@@ -207,7 +207,9 @@ void atoms2md(gmx_mtop_t *mtop, t_inputrec *ir,
         if (ir->bAdress)
         {
             srenew(md->wf, md->nalloc);
+            srenew(md->wfprime,md->nalloc); //210728KKOR
             srenew(md->tf_table_index, md->nalloc);
+            srenew(md->V_tot,md->nalloc); //210728KKOR
         }
     }
 

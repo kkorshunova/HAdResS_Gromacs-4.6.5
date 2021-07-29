@@ -165,4 +165,14 @@ void adress_set_kernel_flags(int n_ex, int n_hyb, int n_cg, t_mdatoms * mdatoms)
 /* functions to look up if a energy group is explicit or coarse-grained*/
 gmx_bool egp_explicit(t_forcerec *   fr, int egp_nr);
 gmx_bool egp_coarsegrained(t_forcerec *   fr, int egp_nr);
+
+real
+Dadress_weight(rvec            x,
+               int             adresstype,
+               real            adressr,
+               real            adressw,
+               rvec *          ref,
+               t_pbc *         pbc,
+               t_forcerec *         fr );
+
 #endif

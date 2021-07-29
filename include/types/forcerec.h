@@ -450,7 +450,7 @@ typedef struct {
     t_forcetable  * atf_tabs;
     real            adress_ex_forcecap;
     gmx_bool        adress_do_hybridpairs;
-    /* 210723KKOR: H-AdResS additional parameters:
+    /* 210723KKOR: H-AdResS additional parameters: */
     gmx_bool        adress_do_drift;
     real            adress_deltaU;
     real          * adress_dhdl;
@@ -459,7 +459,6 @@ typedef struct {
     int             adress_dhdlbins;
     int             adress_fcorr_count;
     gmx_bool        adress_onthefly_TI;
-     */
 
     /* User determined parameters, copied from the inputrec */
     int  userint1;

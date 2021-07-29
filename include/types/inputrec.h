@@ -270,11 +270,13 @@ typedef struct {
     rvec     refs;           /* Coordinates for AdResS reference             */
     real     ex_forcecap;    /* in the hybrid zone, cap forces large then this to adress_ex_forcecap */
     gmx_bool do_hybridpairs; /* If true pair interaction forces are also scaled in an adress way*/
-
+    gmx_bool onthefly_TI;    /* H-AdResS depreciated keyword, todo: remove after tests */
     int    * tf_table_index; /* contains mapping of energy group index -> i-th adress tf table*/
     int      n_tf_grps;
     int     *group_explicit;
     int      n_energy_grps;
+    gmx_bool do_drift;       /* H-AdResS: enables calculatation of drift force compensation */
+    real     deltaU;         /* H-AdResS: uhhh... todo: check what this does*/
 } t_adress;
 
 typedef struct {
