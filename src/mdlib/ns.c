@@ -1150,11 +1150,11 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
     t_nblist  *   vdwc_ww      = NULL;
     t_nblist  *   coul_ww      = NULL;
     /* 210721KKOR: add options for free energy
-     * required structs/vars/if-clauses are taken from put_in_list_at()
+     * required structs/vars/if-clauses are taken from put_in_list_at() */
     t_nblist *   vdwc_free  = NULL;
     t_nblist *   vdw_free   = NULL;
     t_nblist *   coul_free  = NULL;
-     */
+
 
     int           i, j, jcg, igid, gid, nbl_ind, nbl_ind_adress;
     atom_id       jj, jj0, jj1, i_atom;
@@ -1192,36 +1192,34 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
     iwater = (solvent_opt != esolNO) ? GET_CGINFO_SOLOPT(cginfo[icg]) : esolNO;
 
     /*210721KKOR: following if-clause has to be changed to the one copied from put_in_list_at() */
-    if (md->nPerturbed)
+    /*if (md->nPerturbed)
     {
         gmx_fatal(FARGS, "AdResS does not support free energy perturbation\n");
-    }
-    /* 210721KKOR: from put_in_list_at():
+    } */
+    /* 210721KKOR: from put_in_list_at(): */
     bFreeEnergy = FALSE;
     if (md->nPerturbed)
     {
-         * Check if any of the particles involved are perturbed.
-         * If not we can do the cheaper normal put_in_list
-         * and use more solvent optimization.
-         *
+         /* Check if any of the particles involved are perturbed.
+         * The check is done for the atoms i of cgi first:
+         */
         for (i = 0; i < nicg; i++)
         {
             bFreeEnergy |= bPert[i0+i];
         }
-        * Loop over the j charge groups *
+        /* Loop over the j charge groups */
         for (j = 0; (j < nj && !bFreeEnergy); j++)
         {
             jcg = jjcg[j];
             jj0 = index[jcg];
             jj1 = index[jcg+1];
-            * Finally loop over the atoms in the j-charge group *
+            /* Finally loop over the atoms in the j-charge group */
             for (jj = jj0; jj < jj1; jj++)
             {
                 bFreeEnergy |= bPert[jj];
             }
         }
     }
-    */
 
     /* Unpack pointers to neighbourlist structs */
     if (fr->nnblists == 2)
@@ -1254,190 +1252,309 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
     vdw_adress  = &nlist_adress[eNL_VDW];
     coul_adress = &nlist_adress[eNL_QQ];
 
-    /* We do not support solvent optimization with AdResS for now.
-       For this we would need hybrid solvent-other kernels */
+    if (!bFreeEnergy) {
+        /* We do not support solvent optimization with AdResS for now.
+           For this we would need hybrid solvent-other kernels */
 
-    /* no solvent as i charge group */
-    /* Loop over the atoms in the i charge group */
-    for (i = 0; i < nicg; i++)
-    {
-        i_atom  = i0+i;
-        gid     = GID(igid, jgid, ngid);
-        qi      = charge[i_atom];
+        /* no solvent as i charge group */
+        /* Loop over the atoms in the i charge group */
+        for (i = 0; i < nicg; i++) {
+            i_atom = i0 + i;
+            gid = GID(igid, jgid, ngid);
+            qi = charge[i_atom];
 
-        /* Create new i_atom for each energy group */
-        if (bDoVdW && bDoCoul)
-        {
-            new_i_nblist(vdwc, bLR, i_atom, shift, gid);
-            new_i_nblist(vdwc_adress, bLR, i_atom, shift, gid);
+            /* Create new i_atom for each energy group */
+            if (bDoVdW && bDoCoul) {
+                new_i_nblist(vdwc, bLR, i_atom, shift, gid);
+                new_i_nblist(vdwc_adress, bLR, i_atom, shift, gid);
 
-        }
-        if (bDoVdW)
-        {
-            new_i_nblist(vdw, bLR, i_atom, shift, gid);
-            new_i_nblist(vdw_adress, bLR, i_atom, shift, gid);
+            }
+            if (bDoVdW) {
+                new_i_nblist(vdw, bLR, i_atom, shift, gid);
+                new_i_nblist(vdw_adress, bLR, i_atom, shift, gid);
 
-        }
-        if (bDoCoul)
-        {
-            new_i_nblist(coul, bLR, i_atom, shift, gid);
-            new_i_nblist(coul_adress, bLR, i_atom, shift, gid);
-        }
-        bDoVdW_i  = (bDoVdW  && bHaveVdW[type[i_atom]]);
-        bDoCoul_i = (bDoCoul && qi != 0);
+            }
+            if (bDoCoul) {
+                new_i_nblist(coul, bLR, i_atom, shift, gid);
+                new_i_nblist(coul_adress, bLR, i_atom, shift, gid);
+            }
+            bDoVdW_i = (bDoVdW && bHaveVdW[type[i_atom]]);
+            bDoCoul_i = (bDoCoul && qi != 0);
 
-        /* Here we find out whether the energy groups interaction belong to a
-         * coarse-grained (vsite) or atomistic interaction. Note that, because
-         * interactions between coarse-grained and other (atomistic) energygroups
-         * are excluded automatically by grompp, it is sufficient to check for
-         * the group id of atom i (igid) */
-        bEnergyGroupCG = !egp_explicit(fr, igid);
+            /* Here we find out whether the energy groups interaction belong to a
+             * coarse-grained (vsite) or atomistic interaction. Note that, because
+             * interactions between coarse-grained and other (atomistic) energygroups
+             * are excluded automatically by grompp, it is sufficient to check for
+             * the group id of atom i (igid) */
+            bEnergyGroupCG = !egp_explicit(fr, igid);
 
-        if (bDoVdW_i || bDoCoul_i)
-        {
-            /* Loop over the j charge groups */
-            for (j = 0; (j < nj); j++)
-            {
-                jcg = jjcg[j];
+            if (bDoVdW_i || bDoCoul_i) {
+                /* Loop over the j charge groups */
+                for (j = 0; (j < nj); j++) {
+                    jcg = jjcg[j];
 
-                /* Check for large charge groups */
-                if (jcg == icg)
-                {
-                    jj0 = i0 + i + 1;
-                }
-                else
-                {
-                    jj0 = index[jcg];
-                }
-
-                jj1 = index[jcg+1];
-                /* Finally loop over the atoms in the j-charge group */
-                for (jj = jj0; jj < jj1; jj++)
-                {
-                    bNotEx = NOTEXCL(bExcl, i, jj);
-
-                    /* Now we have to exclude interactions which will be zero
-                     * anyway due to the AdResS weights (in previous implementations
-                     * this was done in the force kernel). This is necessary as
-                     * pure interactions (those with b_hybrid=false, i.e. w_i*w_j==1 or 0)
-                     * are put into neighbour lists which will be passed to the
-                     * standard (optimized) kernels for speed. The interactions with
-                     * b_hybrid=true are placed into the _adress neighbour lists and
-                     * processed by the generic AdResS kernel.
-                     */
-                    /* 210721KKOR: H-AdResS excluded interactions:
-                     * CG: same condition (both wf_i and wf_j ~ 1 for F_CG to become ~0)
-                     * AT: unlike AdResS, where either i or j need to be ~0, both have to
-                     * be ~0 in H-AdResS for F_AT to become ~0
-                     * Therefore, the if-condition below must be adjusted
-                     * NOTE: optionally, the second part (!bEnergyGroupCG) might be accounted for
-                     * in the nsgrid_core() earlier - this would then double check it?? not sure
-                     */
-                    if ( (bEnergyGroupCG &&
-                          wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS ) ||
-                         ( !bEnergyGroupCG && wf[jj] <= GMX_REAL_EPS ) )
-                    {
-                        continue;
+                    /* Check for large charge groups */
+                    if (jcg == icg) {
+                        jj0 = i0 + i + 1;
+                    } else {
+                        jj0 = index[jcg];
                     }
-                    /* H-AdResS version:
-                     if ( (bEnergyGroupCG &&
-                          wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS ) ||
-                         ( !bEnergyGroupCG && wf[i_atom] <= GMX_REAL_EPS && wf[jj] <= GMX_REAL_EPS ) )
-                    {
-                       continue;
-                    } */
 
-                    /* 210721KKOR: strangely, this b_hybrid condition works for H-AdResS
-                     * even better than for AdResS, so no need to change it: BOTH wf_i and wf_j
-                     * must be either ~0 or ~1 for an interaction to be non-hybrid
-                     */
-                    b_hybrid = !((wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS) ||
-                                 (wf[i_atom] <= GMX_REAL_EPS && wf[jj] <= GMX_REAL_EPS));
+                    jj1 = index[jcg + 1];
+                    /* Finally loop over the atoms in the j-charge group */
+                    for (jj = jj0; jj < jj1; jj++) {
+                        bNotEx = NOTEXCL(bExcl, i, jj);
 
-                    if (bNotEx)
-                    {
-                        if (!bDoVdW_i)
-                        {
-                            if (charge[jj] != 0)
-                            {
-                                if (!b_hybrid)
-                                {
-                                    add_j_to_nblist(coul, jj, bLR);
-                                }
-                                else
-                                {
-                                    add_j_to_nblist(coul_adress, jj, bLR);
-                                }
-                            }
+                        /* Now we have to exclude interactions which will be zero
+                         * anyway due to the AdResS weights (in previous implementations
+                         * this was done in the force kernel). This is necessary as
+                         * pure interactions (those with b_hybrid=false, i.e. w_i*w_j==1 or 0)
+                         * are put into neighbour lists which will be passed to the
+                         * standard (optimized) kernels for speed. The interactions with
+                         * b_hybrid=true are placed into the _adress neighbour lists and
+                         * processed by the generic AdResS kernel.
+                         */
+                        /* 210721KKOR: H-AdResS excluded interactions:
+                         * CG: same condition (both wf_i and wf_j ~ 1 for F_CG to become ~0)
+                         * AT: unlike AdResS, where either i or j need to be ~0, both have to
+                         * be ~0 in H-AdResS for F_AT to become ~0
+                         * Therefore, the if-condition below must be adjusted
+                         * NOTE: optionally, the second part (!bEnergyGroupCG) might be accounted for
+                         * in the nsgrid_core() earlier - this would then double check it?? not sure
+                         */
+                        if ((bEnergyGroupCG &&
+                             wf[i_atom] >= 1 - GMX_REAL_EPS && wf[jj] >= 1 - GMX_REAL_EPS) ||
+                            (!bEnergyGroupCG && wf[jj] <= GMX_REAL_EPS)) {
+                            continue;
                         }
-                        else if (!bDoCoul_i)
+                        /* H-AdResS version:
+                         if ( (bEnergyGroupCG &&
+                              wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS ) ||
+                             ( !bEnergyGroupCG && wf[i_atom] <= GMX_REAL_EPS && wf[jj] <= GMX_REAL_EPS ) )
                         {
-                            if (bHaveVdW[type[jj]])
-                            {
-                                if (!b_hybrid)
-                                {
-                                    add_j_to_nblist(vdw, jj, bLR);
-                                }
-                                else
-                                {
-                                    add_j_to_nblist(vdw_adress, jj, bLR);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (bHaveVdW[type[jj]])
-                            {
-                                if (charge[jj] != 0)
-                                {
-                                    if (!b_hybrid)
-                                    {
-                                        add_j_to_nblist(vdwc, jj, bLR);
-                                    }
-                                    else
-                                    {
-                                        add_j_to_nblist(vdwc_adress, jj, bLR);
+                           continue;
+                        } */
+
+                        /* 210721KKOR: strangely, this b_hybrid condition works for H-AdResS
+                         * even better than for AdResS, so no need to change it: BOTH wf_i and wf_j
+                         * must be either ~0 or ~1 for an interaction to be non-hybrid
+                         */
+                        b_hybrid = !((wf[i_atom] >= 1 - GMX_REAL_EPS && wf[jj] >= 1 - GMX_REAL_EPS) ||
+                                     (wf[i_atom] <= GMX_REAL_EPS && wf[jj] <= GMX_REAL_EPS));
+
+                        if (bNotEx) {
+                            if (!bDoVdW_i) {
+                                if (charge[jj] != 0) {
+                                    if (!b_hybrid) {
+                                        add_j_to_nblist(coul, jj, bLR);
+                                    } else {
+                                        add_j_to_nblist(coul_adress, jj, bLR);
                                     }
                                 }
-                                else
-                                {
-                                    if (!b_hybrid)
-                                    {
+                            } else if (!bDoCoul_i) {
+                                if (bHaveVdW[type[jj]]) {
+                                    if (!b_hybrid) {
                                         add_j_to_nblist(vdw, jj, bLR);
-                                    }
-                                    else
-                                    {
+                                    } else {
                                         add_j_to_nblist(vdw_adress, jj, bLR);
                                     }
+                                }
+                            } else {
+                                if (bHaveVdW[type[jj]]) {
+                                    if (charge[jj] != 0) {
+                                        if (!b_hybrid) {
+                                            add_j_to_nblist(vdwc, jj, bLR);
+                                        } else {
+                                            add_j_to_nblist(vdwc_adress, jj, bLR);
+                                        }
+                                    } else {
+                                        if (!b_hybrid) {
+                                            add_j_to_nblist(vdw, jj, bLR);
+                                        } else {
+                                            add_j_to_nblist(vdw_adress, jj, bLR);
+                                        }
+
+                                    }
+                                } else if (charge[jj] != 0) {
+                                    if (!b_hybrid) {
+                                        add_j_to_nblist(coul, jj, bLR);
+                                    } else {
+                                        add_j_to_nblist(coul_adress, jj, bLR);
+                                    }
 
                                 }
                             }
-                            else if (charge[jj] != 0)
+                        }
+                    }
+                }
+
+                close_i_nblist(vdw);
+                close_i_nblist(coul);
+                close_i_nblist(vdwc);
+                close_i_nblist(vdw_adress);
+                close_i_nblist(coul_adress);
+                close_i_nblist(vdwc_adress);
+            }
+        }
+
+    }
+    else
+    {
+        /*TODO check if this actually works! */
+        /* we are doing free energy */
+        vdwc_free = &nlist[eNL_VDWQQ_FREE];
+        vdw_free  = &nlist[eNL_VDW_FREE];
+        coul_free = &nlist[eNL_QQ_FREE];
+        /* Loop over the atoms in the i charge group */
+        for(i=0; i<nicg; i++)
+        {
+            i_atom  = i0+i;
+            gid     = GID(igid,jgid,ngid);
+            qi      = charge[i_atom];
+            qiB     = chargeB[i_atom];
+
+            /* Create new i_atom for each energy group */
+            if (bDoVdW && bDoCoul)
+                new_i_nblist(vdwc,bLR,i_atom,shift,gid);
+            if (bDoVdW)
+                new_i_nblist(vdw,bLR,i_atom,shift,gid);
+            if (bDoCoul)
+                new_i_nblist(coul,bLR,i_atom,shift,gid);
+
+            new_i_nblist(vdw_free,bLR,i_atom,shift,gid);
+            new_i_nblist(coul_free,bLR,i_atom,shift,gid);
+            new_i_nblist(vdwc_free,bLR,i_atom,shift,gid);
+
+            bDoVdW_i  = (bDoVdW  &&
+                         (bHaveVdW[type[i_atom]] || bHaveVdW[typeB[i_atom]]));
+            bDoCoul_i = (bDoCoul && (qi!=0 || qiB!=0));
+            /* For TIP4P the first atom does not have a charge,
+             * but the last three do. So we should still put an atom
+             * without LJ but with charge in the water-atom neighborlist
+             * for a TIP4p i charge group.
+             * For SPC type water the first atom has LJ and charge,
+             * so there is no such problem.
+             */
+            if (iwater == esolNO)
+            {
+                bDoCoul_i_sol = bDoCoul_i;
+            }
+            else
+            {
+                bDoCoul_i_sol = bDoCoul;
+            }
+
+            if (bDoVdW_i || bDoCoul_i_sol)
+            {
+                /* Loop over the j charge groups */
+                for(j=0; (j<nj); j++)
+                {
+                    jcg=jjcg[j];
+
+                    /* Check for large charge groups */
+                    if (jcg == icg)
+                    {
+                        jj0 = i0 + i + 1;
+                    }
+                    else
+                    {
+                        jj0 = index[jcg];
+                    }
+
+                    jj1=index[jcg+1];
+                    /* Finally loop over the atoms in the j-charge group */
+                    bFree = bPert[i_atom];
+                    for(jj=jj0; (jj<jj1); jj++)
+                    {
+                        bFreeJ = bFree || bPert[jj];
+                        /* Complicated if, because the water H's should also
+                         * see perturbed j-particles
+                         */
+                        if (iwater==esolNO || i==0 || bFreeJ)
+                        {
+                            bNotEx = NOTEXCL(bExcl,i,jj);
+
+                            if (bNotEx)
                             {
-                                if (!b_hybrid)
+                                if (bFreeJ)
                                 {
-                                    add_j_to_nblist(coul, jj, bLR);
+                                    if (!bDoVdW_i)
+                                    {
+                                        if (charge[jj]!=0 || chargeB[jj]!=0)
+                                        {
+                                            add_j_to_nblist(coul_free,jj,bLR);
+                                        }
+                                    }
+                                    else if (!bDoCoul_i)
+                                    {
+                                        if (bHaveVdW[type[jj]] || bHaveVdW[typeB[jj]])
+                                        {
+                                            add_j_to_nblist(vdw_free,jj,bLR);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (bHaveVdW[type[jj]] || bHaveVdW[typeB[jj]])
+                                        {
+                                            if (charge[jj]!=0 || chargeB[jj]!=0)
+                                            {
+                                                add_j_to_nblist(vdwc_free,jj,bLR);
+                                            }
+                                            else
+                                            {
+                                                add_j_to_nblist(vdw_free,jj,bLR);
+                                            }
+                                        }
+                                        else if (charge[jj]!=0 || chargeB[jj]!=0)
+                                            add_j_to_nblist(coul_free,jj,bLR);
+                                    }
+                                }
+                                else if (!bDoVdW_i)
+                                {
+                                    /* This is done whether or not bWater is set */
+                                    if (charge[jj] != 0)
+                                    {
+                                        add_j_to_nblist(coul,jj,bLR);
+                                    }
+                                }
+                                else if (!bDoCoul_i_sol)
+                                {
+                                    if (bHaveVdW[type[jj]])
+                                    {
+                                        add_j_to_nblist(vdw,jj,bLR);
+                                    }
                                 }
                                 else
                                 {
-                                    add_j_to_nblist(coul_adress, jj, bLR);
+                                    if (bHaveVdW[type[jj]])
+                                    {
+                                        if (charge[jj] != 0)
+                                        {
+                                            add_j_to_nblist(vdwc,jj,bLR);
+                                        }
+                                        else
+                                        {
+                                            add_j_to_nblist(vdw,jj,bLR);
+                                        }
+                                    }
+                                    else if (charge[jj] != 0)
+                                    {
+                                        add_j_to_nblist(coul,jj,bLR);
+                                    }
                                 }
-
                             }
                         }
                     }
                 }
             }
-
             close_i_nblist(vdw);
             close_i_nblist(coul);
             close_i_nblist(vdwc);
-            close_i_nblist(vdw_adress);
-            close_i_nblist(coul_adress);
-            close_i_nblist(vdwc_adress);
+            close_i_nblist(vdw_free);
+            close_i_nblist(coul_free);
+            close_i_nblist(vdwc_free);
         }
     }
-    //TODO put the entire else-clause for the free energy nlists here
 }
 
 static void
