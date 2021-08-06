@@ -83,7 +83,7 @@ do_nonbonded(t_commrec *cr, t_forcerec *fr,
              rvec x[], rvec f_shortrange[], rvec f_longrange[], t_mdatoms *md, t_blocka *excl,
              gmx_grppairener_t *grppener, rvec box_size,
              t_nrnb *nrnb, real *lambda, real dvdlambda[],
-             int nls, int eNL, int flags);
+             int nls, int eNL, int flags, gmx_bool bDoAdress);
 
 /* Calculate VdW/charge listed pair interactions (usually 1-4 interactions).
  * global_atom_index is only passed for printing error messages.
@@ -93,6 +93,23 @@ do_nonbonded_listed(int ftype, int nbonds, const t_iatom iatoms[], const t_ipara
                     const rvec x[], rvec f[], rvec fshift[], const t_pbc *pbc, const t_graph *g,
                     real *lambda, real *dvdl, const t_mdatoms *md, const t_forcerec *fr,
                     gmx_grppairener_t *grppener, int *global_atom_index);
+
+/* Calculate H-AdResS "drift force" acting on the molecules in the hybrid region.
+ * The force acts on both AT and CG representations of the molecule and is calculated
+ * using the V_tot potential energy quantity calculated by generic adress kernel and
+ * wfprime ("gradient of the coupling/weighting function").
+ */
+void
+adress_drift_term(FILE *               fplog,
+                  int                  cg0,
+                  int                  cg1,
+                  int                  cg1home,
+                  t_block *            cgs,
+                  rvec                 x[],
+                  t_forcerec *         fr,
+                  t_mdatoms *          mdatoms,
+                  t_pbc *              pbc,
+                  rvec                 f[]);
 
 #ifdef __cplusplus
 }

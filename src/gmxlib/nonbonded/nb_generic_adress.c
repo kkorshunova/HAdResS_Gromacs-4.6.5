@@ -101,15 +101,20 @@ gmx_nb_generic_adress_kernel(t_nblist *                nlist,
     gmx_bool      bExactElecCutoff, bExactVdwCutoff, bExactCutoff;
 
     real    *     wf;
+    real    *     wfprime; //210802KKOR
+    real    *     V_tot;   //210802KKOR
     real          weight_cg1;
     real          weight_cg2;
-    real          weight_product;
-    real          hybscal; /* the multiplicator to the force for hybrid interactions*/
+    real          weight_product; //210802KKOR: H-AdResS - change to weight_sum
+    real          hybscal; /* the multiplier to the force for hybrid interactions*/
+    real          scal; /* the multiplier to the potential for hybrid interactions*/
     real          force_cap;
     gmx_bool      bCG;
     int           egp_nr;
 
     wf                  = mdatoms->wf;
+    wfprime             = mdatoms->wfprime; //210802KKOR
+    V_tot               = mdatoms->V_tot;   //210802KKOR
 
     force_cap           = fr->adress_ex_forcecap;
 
@@ -224,6 +229,7 @@ gmx_nb_generic_adress_kernel(t_nblist *                nlist,
 
         weight_cg1       = wf[ii];
 
+        /*210802KKOR: can this be applied to H-AdResS? presumes that PRODUCT is used */
         if ((!bCG) && weight_cg1 < ALMOST_ZERO)
         {
             continue;
@@ -233,7 +239,7 @@ gmx_nb_generic_adress_kernel(t_nblist *                nlist,
         {
             jnr              = nlist->jjnr[k];
             weight_cg2       = wf[jnr];
-            weight_product   = weight_cg1*weight_cg2;
+            weight_product   = weight_cg1*weight_cg2; //weight_product   = (weight_cg1+weight_cg2)*0.5;
 
             if (weight_product < ALMOST_ZERO)
             {
@@ -377,6 +383,8 @@ gmx_nb_generic_adress_kernel(t_nblist *                nlist,
                     velec            = (rsq <= rcoulomb2) ? velec : 0.0;
                 }
                 vctot           += velec;
+                V_tot[ii]       += velec; //210802KKOR: H-AdResS do_drift
+                V_tot[jnr]      += velec; //210802KKOR: H-AdResS do_drift
             } /* End of coulomb interactions */
 
 
@@ -476,6 +484,8 @@ gmx_nb_generic_adress_kernel(t_nblist *                nlist,
                     vvdw             = (rsq <= rvdw2) ? vvdw : 0.0;
                 }
                 vvdwtot         += vvdw;
+                V_tot[ii]       += vvdw; //210802KKOR: H-AdResS do_drift
+                V_tot[jnr]      += vvdw; //210802KKOR: H-AdResS do_drift
             } /* end VdW interactions */
 
             fscal            = felec+fvdw;
@@ -485,7 +495,7 @@ gmx_nb_generic_adress_kernel(t_nblist *                nlist,
                 fscal = force_cap*fscal/fabs(fscal);
             }
 
-            fscal           *= hybscal;
+            fscal           *= hybscal; //210802KKOR: H-AdResS force scaling is applied
 
             tx               = fscal*dx;
             ty               = fscal*dy;
@@ -505,8 +515,17 @@ gmx_nb_generic_adress_kernel(t_nblist *                nlist,
         fshift[is3+1]    = fshift[is3+1]+fiy;
         fshift[is3+2]    = fshift[is3+2]+fiz;
         ggid             = nlist->gid[n];
+        /* 210804KKOR: this is where energy-scaling should happen in H-AdResS: */
         velecgrp[ggid]  += vctot;
         vvdwgrp[ggid]   += vvdwtot;
+        /* 210804KKOR: H-AdResS pot.en. scaling for the Coulomb/VdW interactions:
+         * total energy acting on particle i (vctot/vvdwtot) scaled by weighting
+         * function of particle i (weight_cg1)
+        if (!bCG) {scal = weight_cg1;}
+         else {scal = 1 - weight_cg1;}
+        velecgrp[ggid]  += vctot*scal;
+        vvdwgrp[ggid]   += vvdwtot*scal;
+         */
     }
     /* Estimate flops, average for generic adress kernel:
      * 14 flops per outer iteration

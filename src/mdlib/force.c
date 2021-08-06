@@ -170,7 +170,7 @@ void do_force_lowlevel(FILE       *fplog,   gmx_large_int_t step,
 {
     int         i, j, status;
     int         donb_flags;
-    gmx_bool    bDoEpot, bSepDVDL, bSB;
+    gmx_bool    bDoEpot, bSepDVDL, bSB, bDoAdress;
     int         pme_flags;
     matrix      boxs;
     rvec        box_size;
@@ -280,11 +280,12 @@ void do_force_lowlevel(FILE       *fplog,   gmx_large_int_t step,
         {
             donb_flags |= GMX_NONBONDED_DO_LR;
         }
+        bDoAdress = ir->bAdress;
 
         wallcycle_sub_start(wcycle, ewcsNONBONDED);
         do_nonbonded(cr, fr, x, f, f_longrange, md, excl,
                      &enerd->grpp, box_size, nrnb,
-                     lambda, dvdl_nb, -1, -1, donb_flags);
+                     lambda, dvdl_nb, -1, -1, donb_flags, bDoAdress);
 
         /* If we do foreign lambda and we have soft-core interactions
          * we have to recalculate the (non-linear) energies contributions.
@@ -301,7 +302,7 @@ void do_force_lowlevel(FILE       *fplog,   gmx_large_int_t step,
                 do_nonbonded(cr, fr, x, f, f_longrange, md, excl,
                              &(enerd->foreign_grpp), box_size, nrnb,
                              lam_i, dvdl_dum, -1, -1,
-                             (donb_flags & ~GMX_NONBONDED_DO_FORCE) | GMX_NONBONDED_DO_FOREIGNLAMBDA);
+                             (donb_flags & ~GMX_NONBONDED_DO_FORCE) | GMX_NONBONDED_DO_FOREIGNLAMBDA, bDoAdress);
                 sum_epot(&ir->opts, &(enerd->foreign_grpp), enerd->foreign_term);
                 enerd->enerpart_lambda[i] += enerd->foreign_term[F_EPOT];
             }
@@ -692,8 +693,7 @@ void do_force_lowlevel(FILE       *fplog,   gmx_large_int_t step,
 
     /* 210723KKOR: H-AdResS "drift force" correction goes here:
     if (fr->adress_type != eAdressOff && fr->adress_do_drift)
-        adress_drift_term(fplog,cg0,cg1, cg1home,&(top->cgs),x,fr,md,ir->ePBC==epbcNONE ? NULL : &pbc, f, &enerd->term[F_ADR_DELTU]);
-     * todo: add proper definition & declaration of adress_drift_term()
+        adress_drift_term(fplog,cg0,cg1, cg1home,&(top->cgs),x,fr,md,ir->ePBC==epbcNONE ? NULL : &pbc, f);
      * todo: make sure all arguments are correct for this gromcas version
      */
 

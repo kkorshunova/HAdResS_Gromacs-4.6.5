@@ -319,7 +319,7 @@ void do_nonbonded(t_commrec *cr, t_forcerec *fr,
                   rvec x[], rvec f_shortrange[], rvec f_longrange[], t_mdatoms *mdatoms, t_blocka *excl,
                   gmx_grppairener_t *grppener, rvec box_size,
                   t_nrnb *nrnb, real *lambda, real *dvdl,
-                  int nls, int eNL, int flags)
+                  int nls, int eNL, int flags, gmx_bool bDoAdress)
 {
     t_nblist *        nlist;
     int               n, n0, n1, i, i0, i1, sz, range;
@@ -335,11 +335,10 @@ void do_nonbonded(t_commrec *cr, t_forcerec *fr,
     kernel_data.dvdl                    = dvdl;
 
     bForeignLambda = (flags & GMX_NONBONDED_DO_FOREIGNLAMBDA);
-    /* 210722KKOR: H-AdResS array used for "drift force" correction later on
-    if(!bForeignLambda){
+    /* 210722KKOR: H-AdResS array used for "drift force" correction later on */
+    if(!bForeignLambda && bDoAdress){
     for(i=0; i < mdatoms->nalloc; i++) mdatoms->V_tot[i]=0.0;
     }
-     */
 
     if (fr->bAllvsAll)
     {
@@ -693,4 +692,145 @@ do_nonbonded_listed(int ftype, int nbonds,
         }
     }
     return 0.0;
+}
+
+
+void
+adress_drift_term(FILE *               fplog,
+                  int                  cg0,
+                  int                  cg1,
+                  int                  cg1home,
+                  t_block *            cgs,
+                  rvec                 x[],
+                  t_forcerec *         fr,
+                  t_mdatoms *          mdatoms,
+                  t_pbc *              pbc,
+                  rvec                 f[])
+{
+    int            icg,k,k0,k1,d, i;
+    real           nrcg,inv_ncg,mtot,inv_mtot;
+    atom_id *      cgindex;
+    rvec           ix;
+    int            adresstype;
+    real           adressr,adressw;
+    rvec *         ref;
+    real *         massT;
+    real *         wf;
+    real *         wfprime;
+    rvec           dx;
+    real           r;
+    real           V, fscal;
+    rvec           fdrift;
+    real           Mtot;
+    real           massfac;
+    int            binlambda;
+    real *         dhdl;
+    real *         cgdens;
+    real           force_cap;
+
+    snew(dhdl, fr->adress_dhdlbins);
+    snew(cgdens, fr->adress_dhdlbins);
+
+    ref = &(fr->adress_refs);
+
+    clear_rvec(fdrift);
+    cgindex = cgs->index;
+    force_cap = fr->adress_ex_forcecap;
+
+    for (i = 0; i < fr->adress_dhdlbins; i++) {
+        dhdl[i]=0.0;
+        cgdens[i]=0.0;
+    }
+
+
+    for (icg = cg0; (icg < cg1); icg++) {
+        k0 = cgindex[icg];
+        k1 = cgindex[icg + 1];
+
+        if (pbc)
+        {
+            pbc_dx(pbc,(*ref),x[k0],dx);
+        }
+        else
+        {
+            rvec_sub((*ref),x[k0],dx);
+        }
+
+
+        Mtot=0;
+        fscal=0;
+        V=0;
+        for (k = k0; (k < k1); k++) {
+            V+=0.5*mdatoms->V_tot[k];
+            Mtot+=mdatoms->massT[k];
+        }
+
+        fscal=V*mdatoms->wfprime[k0];
+        if (fr->adress_group_explicit[mdatoms->cENER[k0]]){
+            fscal*=-1.0;
+        }
+        if (mdatoms->wf[k0]> 0.0 && mdatoms->wf[k0] < 1.0 && icg<cg1home){
+            binlambda=(int)floor(((real)mdatoms->wf[k0]*(real)fr->adress_dhdlbins));
+
+            if (!fr->adress_group_explicit[mdatoms->cENER[k0]]){
+                cgdens[binlambda]+=1;
+                dhdl[binlambda]+=V;  // + Vcg
+            }else{
+                dhdl[binlambda]-=V; // - Vat
+            }
+        }
+
+        if (force_cap > 0 && (fabs(fscal) > force_cap)) {
+            fscal = force_cap * fscal / fabs(fscal);
+        }
+        if (fr->adress_type == eAdressXSplit ){
+            fdrift[0]=fscal;
+            fdrift[1]=0.0;
+            fdrift[2]=0.0;
+        }else if(fr->adress_type == eAdressSphere){
+            r=sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
+            fdrift[0]=fscal*dx[0]/r;
+            fdrift[1]=fscal*dx[1]/r;
+            fdrift[2]=fscal*dx[2]/r;
+        }
+
+        massfac=1.0;
+
+
+        for (k = k0; (k < k1); k++) {
+            if (fr->adress_group_explicit[mdatoms->cENER[k]]) {
+                massfac = mdatoms->massT[k] / Mtot;
+
+            }
+
+            /*if (fr->adress_group_explicit[mdatoms->cENER[k]]) {
+                  printf("AA k0 %d V %g fdriftx %g massfac %g cener %d Vi %g\n", k0, V, fdrift[0], massfac, mdatoms->cENER[k], mdatoms->V_tot[k]);
+              } else {
+                  printf("CG k0 %d V %g fdriftx %g massfac %g cener %d Vi %g\n", k0, V, fdrift[0], massfac, mdatoms->cENER[k], mdatoms->V_tot[k]);
+              }*/
+
+            /* Attention: this has to be -Force because the forces in the kernel are actually F=grad V*/
+            f[k][0] -= fdrift[0] * massfac;
+            f[k][1] -= fdrift[1] * massfac;
+            f[k][2] -= fdrift[2] * massfac;
+        }
+
+    }
+
+
+
+    for (i = 0; i < fr->adress_dhdlbins; i++) {
+        if (fr->adress_cgdens[i] > 0){
+            fr->adress_fcorr[i]+=dhdl[i]/cgdens[i];
+        }else{
+            fr->adress_fcorr[i]+=0.0;
+        }
+        fr->adress_dhdl[i]+=dhdl[i];
+        fr->adress_cgdens[i]+=cgdens[i];
+    }
+    fr->adress_fcorr_count++;
+
+    sfree(dhdl);
+    sfree(cgdens);
+
 }
