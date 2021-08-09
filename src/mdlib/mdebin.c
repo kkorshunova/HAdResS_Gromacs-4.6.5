@@ -312,8 +312,10 @@ t_mdebin *init_mdebin(ener_file_t       fp_ene,
     md->bEner[F_TEMP] = TRUE;
 #endif
 
-    /* for adress simulations, most energy terms are not meaningfull, and thus disabled*/
-    if (ir->bAdress && !debug)
+    /* for adress simulations, most energy terms are not meaningfull, and thus disabled
+     * 210809KKOR: energy terms are enabled for H-AdResS
+     */
+    /* if (ir->bAdress && !debug)
     {
         for (i = 0; i < F_NRE; i++)
         {
@@ -331,7 +333,7 @@ t_mdebin *init_mdebin(ener_file_t       fp_ene,
         md->bPress = FALSE;
         md->bSurft = FALSE;
         md->bMu    = FALSE;
-    }
+    } */
 
     md->f_nre = 0;
     for (i = 0; i < F_NRE; i++)
