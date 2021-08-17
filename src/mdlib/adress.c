@@ -602,11 +602,12 @@ adress_thermo_force(int                  start,
     unsigned short * ptype;
     rvec *           ref;
     real *           wf;
+    real *           wfprime; //210817KKOR: H-AdResS var
     real             tabscale;
     real *           ATFtab;
     rvec             dr;
     real             w, wsq, wmin1, wmin1sq, wp, wt, rinv, sqr_dl, dl;
-    real             eps, eps2, F, Geps, Heps2, Fp, dmu_dwp, dwp_dr, fscal;
+    real             eps, eps2, F, Geps, Heps2, Fp, dmu_dwp, dwp_dr, fscal, VV, Y; //210817KKOR: H-AdResS vars: VV, Y
 
     adresstype        = fr->adress_type;
     adressw           = fr->adress_hy_width;
@@ -615,6 +616,7 @@ adress_thermo_force(int                  start,
     ptype             = mdatoms->ptype;
     ref               = &(fr->adress_refs);
     wf                = mdatoms->wf;
+    wfprime           = mdatoms->wfprime; //210817KKOR: H-AdResS var
 
     for (iatom = start; (iatom < start+homenr); iatom++)
     {
@@ -652,7 +654,7 @@ adress_thermo_force(int                  start,
 
 
 
-                    /* calculate distace to adress center again */
+                    /* calculate distance to AdResS center again */
                     sqr_dl = 0.0;
                     switch (adresstype)
                     {
@@ -674,27 +676,41 @@ adress_thermo_force(int                  start,
                             rinv = 0.0;
                     }
 
-                    dl = sqrt(sqr_dl);
+                    dl = sqrt(sqr_dl); //210817KKOR: dl=wf[iatom];
                     /* table origin is adress center */
                     wt               = dl*tabscale;
                     n0               = wt;
                     eps              = wt-n0;
                     eps2             = eps*eps;
                     nnn              = 4*n0;
+                    //Y                = ATFtab[nnn]; //210817KKOR: H-AdResS
                     F                = ATFtab[nnn+1];
                     Geps             = eps*ATFtab[nnn+2];
                     Heps2            = eps2*ATFtab[nnn+3];
                     Fp               = F+Geps+Heps2;
                     F                = (Fp+Geps+2.0*Heps2)*tabscale;
+                    //VV               = Y+eps*Fp; //210817KKOR: H-AdResS
 
-                    fscal            = F*rinv;
+                    fscal            = F*rinv; //fscal = F*wfprime[iatom];
 
+                    /* 210817KKOR: change this AdResS block to H-AdResS below */
                     f[iatom][0]        += fscal*dr[0];
                     if (adresstype != eAdressXSplit)
                     {
                         f[iatom][1]    += fscal*dr[1];
                         f[iatom][2]    += fscal*dr[2];
                     }
+                    /* H-AdResS block:
+                    if (adresstype == eAdressXSplit){
+                        f[iatom][0]        += fscal;
+                    }
+                    else if (adresstype == eAdressSphere)
+                    {
+                        f[iatom][0]    += fscal*dr[0]*rinv;
+                        f[iatom][1]    += fscal*dr[1]*rinv;
+                        f[iatom][2]    += fscal*dr[2]*rinv;
+                    }
+                     * /
                 }
             }
         }
