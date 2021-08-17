@@ -710,7 +710,7 @@ adress_thermo_force(int                  start,
                         f[iatom][1]    += fscal*dr[1]*rinv;
                         f[iatom][2]    += fscal*dr[2]*rinv;
                     }
-                     * /
+                     */
                 }
             }
         }

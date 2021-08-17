@@ -1497,6 +1497,7 @@ t_forcetable make_atf_table(FILE *out, const output_env_t oenv,
      */
     snew(td, 1);
 
+    //210817KKOR: H-AdResS uses a different box_r definition, comment and replace
     if (fr->adress_type == eAdressSphere)
     {
         /* take half box diagonal direction as tab range */
@@ -1511,6 +1512,7 @@ t_forcetable make_atf_table(FILE *out, const output_env_t oenv,
         /* xsplit: take half box x direction as tab range */
         box_r        = box[0][0]/2;
     }
+    //box_r=1.0;
     table.r         = box_r;
     table.scale     = 0;
     table.n         = 0;
@@ -1521,13 +1523,13 @@ t_forcetable make_atf_table(FILE *out, const output_env_t oenv,
     read_tables(out, fn, 1, 0, td);
     rtab      = td[0].x[td[0].nx-1];
 
-    if (fr->adress_type == eAdressXSplit && (rtab < box[0][0]/2))
+    if (fr->adress_type == eAdressXSplit && (rtab < box[0][0]/2)) //shouldn't apply to H-AdResS
     {
         gmx_fatal(FARGS, "AdResS full box therm force table in file %s extends to %f:\n"
                   "\tshould extend to at least half the length of the box in x-direction"
                   "%f\n", fn, rtab, box[0][0]/2);
     }
-    if (rtab < box_r)
+    if (rtab < box_r) // in H-AdResS: if (rtab < 1)
     {
         gmx_fatal(FARGS, "AdResS full box therm force table in file %s extends to %f:\n"
                   "\tshould extend to at least for spherical adress"
