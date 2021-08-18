@@ -107,16 +107,15 @@ adress_weight(rvec                 x,
     /* hybrid region */
     else
     {
-        tmp = cos((dl-adressr)*M_PI/2/adressw);
-        return tmp*tmp;
-        /*210719KKOR: H-AdResS weighting scheme (prev 2 lines are commented):
+        /* tmp = cos((dl-adressr)*M_PI/2/adressw);
+        return tmp*tmp; */
+        /*210719KKOR: H-AdResS weighting scheme (prev 2 lines are commented): */
         l=fabs(dl-adressr);
         H=adressw;
         H5=H*H*H*H*H;
 
         tmp=(1-30.0/H5*(l*l*l*l*l/5.0-1.0/2.0*l*l*l*l*H+l*l*l/3.0*H*H));
         return tmp;
-        */
     }
 }
 

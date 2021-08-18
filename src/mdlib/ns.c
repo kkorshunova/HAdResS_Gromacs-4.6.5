@@ -1322,18 +1322,18 @@ put_in_list_adress(gmx_bool              bHaveVdW[],
                          * NOTE: optionally, the second part (!bEnergyGroupCG) might be accounted for
                          * in the nsgrid_core() earlier - this would then double check it?? not sure
                          */
-                        if ((bEnergyGroupCG &&
+                        /* if ((bEnergyGroupCG &&
                              wf[i_atom] >= 1 - GMX_REAL_EPS && wf[jj] >= 1 - GMX_REAL_EPS) ||
                             (!bEnergyGroupCG && wf[jj] <= GMX_REAL_EPS)) {
                             continue;
-                        }
-                        /* H-AdResS version:
+                        } */
+                        /* H-AdResS version: */
                          if ( (bEnergyGroupCG &&
                               wf[i_atom] >= 1-GMX_REAL_EPS && wf[jj] >= 1-GMX_REAL_EPS ) ||
                              ( !bEnergyGroupCG && wf[i_atom] <= GMX_REAL_EPS && wf[jj] <= GMX_REAL_EPS ) )
                         {
                            continue;
-                        } */
+                        }
 
                         /* 210721KKOR: strangely, this b_hybrid condition works for H-AdResS
                          * even better than for AdResS, so no need to change it: BOTH wf_i and wf_j
@@ -2573,14 +2573,14 @@ static int nsgrid_core(FILE *log, t_commrec *cr, t_forcerec *fr,
                      *  from the neighbour list as it will not interact  */
                     /* 210720KKOR: H-AdResS: comment this if-clause due to a different interpolation scheme
                      *  (sum instead of product of weighting functions)
-                     */
                     if (fr->adress_type != eAdressOff)
                     {
                         if (md->wf[cgs->index[icg]] <= GMX_REAL_EPS && egp_explicit(fr, igid))
                         {
                             continue;
                         }
-                    }
+                    } */
+
                     /* Get shift vector */
                     shift = XYZ2IS(tx, ty, tz);
 #ifdef NS5DB
