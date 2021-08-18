@@ -181,6 +181,31 @@ void do_force_lowlevel(FILE       *fplog,   gmx_large_int_t step,
     double      clam_i, vlam_i;
     real        dvdl_dum[efptNR], dvdl, dvdl_nb[efptNR], lam_i[efptNR];
     real        dvdlsum;
+    int    cg0,cg1, cg1home; //210818KKOR: for H-AdResS do_drift
+
+    /* 210818KKOR: find the number of charge groups for H-AdResS do_drift */
+    if (PARTDECOMP(cr))
+    {
+        pd_cg_range(cr,&cg0,&cg1);
+    }
+    else
+    {
+        cg0 = 0;
+        if (DOMAINDECOMP(cr))
+        {
+            cg1 = cr->dd->ncg_tot;
+            cg1home =cr->dd->ncg_home;
+        }
+        else
+        {
+            cg1 = top->cgs.nr;
+            cg1home =cg1;
+        }
+        if (fr->n_tpi > 0)
+        {
+            cg1--;
+        }
+    }
 
 #ifdef GMX_MPI
     double  t0 = 0.0, t1, t2, t3; /* time measurement for coarse load balancing */
@@ -691,11 +716,9 @@ void do_force_lowlevel(FILE       *fplog,   gmx_large_int_t step,
         pr_rvecs(debug, 0, "fshift after bondeds", fr->fshift, SHIFTS);
     }
 
-    /* 210723KKOR: H-AdResS "drift force" correction goes here:
+    /* 210723KKOR: H-AdResS "drift force" correction goes here: */
     if (fr->adress_type != eAdressOff && fr->adress_do_drift)
         adress_drift_term(fplog,cg0,cg1, cg1home,&(top->cgs),x,fr,md,ir->ePBC==epbcNONE ? NULL : &pbc, f);
-     * todo: make sure all arguments are correct for this gromcas version
-     */
 
     GMX_MPE_LOG(ev_force_finish);
 
