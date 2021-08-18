@@ -675,7 +675,8 @@ adress_thermo_force(int                  start,
                             rinv = 0.0;
                     }
 
-                    dl = sqrt(sqr_dl); //210817KKOR: dl=wf[iatom];
+                    //dl = sqrt(sqr_dl);
+                    dl = wf[iatom]; //210818KKOR: for scalable H-AdResS tf table
                     /* table origin is adress center */
                     wt               = dl*tabscale;
                     n0               = wt;
@@ -690,16 +691,17 @@ adress_thermo_force(int                  start,
                     F                = (Fp+Geps+2.0*Heps2)*tabscale;
                     //VV               = Y+eps*Fp; //210817KKOR: H-AdResS
 
-                    fscal            = F*rinv; //fscal = F*wfprime[iatom];
+                    //fscal            = F*rinv;
+                    fscal            = F*wfprime[iatom]; //210818KKOR: H-AdResS
 
-                    /* 210817KKOR: change this AdResS block to H-AdResS below */
+                    /* 210818KKOR: changed this AdResS block to H-AdResS below
                     f[iatom][0]        += fscal*dr[0];
                     if (adresstype != eAdressXSplit)
                     {
                         f[iatom][1]    += fscal*dr[1];
                         f[iatom][2]    += fscal*dr[2];
-                    }
-                    /* H-AdResS block:
+                    } */
+                    /* H-AdResS block: */
                     if (adresstype == eAdressXSplit){
                         f[iatom][0]        += fscal;
                     }
@@ -709,7 +711,7 @@ adress_thermo_force(int                  start,
                         f[iatom][1]    += fscal*dr[1]*rinv;
                         f[iatom][2]    += fscal*dr[2]*rinv;
                     }
-                     */
+
                 }
             }
         }
