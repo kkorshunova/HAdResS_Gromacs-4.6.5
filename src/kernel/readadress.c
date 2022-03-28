@@ -41,7 +41,7 @@
 
 #define MAXPTR 254
 
-static char adress_refs[STRLEN], adress_tf_grp_names[STRLEN], adress_cg_grp_names[STRLEN];
+static char adress_refs[STRLEN], adress_refs_2[STRLEN], adress_tf_grp_names[STRLEN], adress_cg_grp_names[STRLEN]; //220309KKOR added adress_refs_2
 
 void read_adressparams(int *ninp_p, t_inpfile **inp_p, t_adress *adress, warninp_t wi)
 {
@@ -64,6 +64,7 @@ void read_adressparams(int *ninp_p, t_inpfile **inp_p, t_adress *adress, warninp
     EETYPE("adress_interface_correction", adress->icor,         eAdressICtype_names);
     EETYPE("adress_site",                adress->site,         eAdressSITEtype_names);
     STYPE ("adress_reference_coords",    adress_refs,             NULL);
+    STYPE ("adress_reference_coords_lower_h",    adress_refs_2,             NULL); //220309KKOR added adress_refs_2
     STYPE ("adress_tf_grp_names",        adress_tf_grp_names,     NULL);
     STYPE ("adress_cg_grp_names",        adress_cg_grp_names,     NULL);
     EETYPE("adress_do_hybridpairs",      adress->do_hybridpairs, yesno_names);

@@ -714,10 +714,11 @@ adress_drift_term(FILE *               fplog,
     int            adresstype;
     real           adressr,adressw;
     rvec *         ref;
+    rvec *         ref_2; //220309KKOR: Hemisphere geom.
     real *         massT;
     real *         wf;
     real *         wfprime;
-    rvec           dx;
+    rvec           dx, dx_2; //220309KKOR: Hemisphere geom.
     real           r;
     real           V, fscal;
     rvec           fdrift;
@@ -732,6 +733,7 @@ adress_drift_term(FILE *               fplog,
     snew(cgdens, fr->adress_dhdlbins);
 
     ref = &(fr->adress_refs);
+    //ref_2 = &(fr->adress_refs_2); //220309KKOR: Hemisphere geom.
 
     clear_rvec(fdrift);
     cgindex = cgs->index;

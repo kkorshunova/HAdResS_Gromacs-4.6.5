@@ -2163,6 +2163,7 @@ void init_forcerec(FILE              *fp,
             fr->adress_tf_table_index[i] = ir->adress->tf_table_index[i];
         }
         copy_rvec(ir->adress->refs, fr->adress_refs);
+        copy_rvec(ir->adress->refs_2,fr->adress_refs_2); //220314KKOR: Hemisphere geom
     }
     else
     {
